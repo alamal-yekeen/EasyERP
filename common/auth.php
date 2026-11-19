@@ -75,10 +75,10 @@ function csrfVerify(?string $token): bool {
  * Rate-limiter using the DB (works across multiple PHP workers).
  * Returns true if the caller is ALLOWED to proceed.
  */
-function rateLimitAllow(PDO $pdo, string $email, string $ipBin, array $cfg): bool {
+function rateLimitAllow(PDO $conn, string $email, string $ipBin, array $cfg): bool {
     $since = date('Y-m-d H:i:s', time() - $cfg['rate_window_seconds']);
 
-    $stmt = $pdo->prepare(
+    $stmt = $conn->prepare(
         "SELECT
             SUM(email = ?) AS by_email,
             SUM(ip    = ?) AS by_ip
@@ -93,9 +93,9 @@ function rateLimitAllow(PDO $pdo, string $email, string $ipBin, array $cfg): boo
 }
 
 /** Record an attempt (success or failure) for rate-limiting. */
-function recordAttempt(PDO $pdo, string $email, string $ipBin,
+function recordAttempt(PDO $conn, string $email, string $ipBin,
                        string $ua, bool $success): void {
-    $stmt = $pdo->prepare(
+    $stmt = $conn->prepare(
         "INSERT INTO login_attempts (email, ip, user_agent, success)
          VALUES (?, ?, ?, ?)"
     );
@@ -106,9 +106,9 @@ function recordAttempt(PDO $pdo, string $email, string $ipBin,
  * Verify credentials. Returns the user row on success, null on failure.
  * Updates failed_attempts / locked_until / last_login_* atomically.
  */
-function verifyCredentials(PDO $pdo, string $email, string $password,
+function verifyCredentials(PDO $conn, string $email, string $password,
                            string $ipBin, array $cfg): ?array {
-    $stmt = $pdo->prepare(
+    $stmt = $conn->prepare(
         "SELECT id, email, password_hash, full_name, is_active,
                 failed_attempts, locked_until
          FROM users WHERE email = ? LIMIT 1"
@@ -133,7 +133,7 @@ function verifyCredentials(PDO $pdo, string $email, string $password,
             $lock = $newAttempts >= $cfg['max_failed_attempts']
                 ? date('Y-m-d H:i:s', time() + $cfg['lockout_seconds'])
                 : null;
-            $upd = $pdo->prepare(
+            $upd = $conn->prepare(
                 "UPDATE users SET failed_attempts = ?, locked_until = ?
                  WHERE id = ?"
             );
@@ -147,7 +147,7 @@ function verifyCredentials(PDO $pdo, string $email, string $password,
     }
 
     // Success — reset counters, stamp last login.
-    $upd = $pdo->prepare(
+    $upd = $conn->prepare(
         "UPDATE users
          SET failed_attempts = 0, locked_until = NULL,
              last_login_at = NOW(), last_login_ip = ?
@@ -158,7 +158,7 @@ function verifyCredentials(PDO $pdo, string $email, string $password,
     // Transparent rehash if algorithm/cost changed
     if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
         $newHash = password_hash($password, PASSWORD_DEFAULT);
-        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+        $conn->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
             ->execute([$newHash, $user['id']]);
     }
 
@@ -166,8 +166,7 @@ function verifyCredentials(PDO $pdo, string $email, string $password,
 }
 
 /** Issue a new session (call AFTER successful login). */
-function issueSession(PDO $pdo, int $userId, string $ipBin,
-                      string $ua, array $cfg): string {
+function issueSession(PDO $conn, int $userId, string $ipBin,  string $ua, array $cfg): string {
     session_regenerate_id(true);                  // ← prevents session fixation
     $_SESSION['user_id']    = $userId;
     $_SESSION['logged_in']  = true;
@@ -176,7 +175,7 @@ function issueSession(PDO $pdo, int $userId, string $ipBin,
     $sid     = bin2hex(random_bytes(32));
     $expires = date('Y-m-d H:i:s', time() + $cfg['session_lifetime']);
 
-    $pdo->prepare(
+    $conn->prepare(
         "INSERT INTO user_sessions
             (id, user_id, ip, user_agent, expires_at)
          VALUES (?, ?, ?, ?, ?)"
@@ -187,12 +186,12 @@ function issueSession(PDO $pdo, int $userId, string $ipBin,
 }
 
 /** Require a logged-in user on protected pages. */
-function requireLogin(PDO $pdo): array {
+function requireLogin(PDO $conn): array {
     if (empty($_SESSION['user_id']) || empty($_SESSION['db_session_id'])) {
         header('Location: /easy/login');
         exit;
     }
-    $stmt = $pdo->prepare(
+    $stmt = $conn->prepare(
         "SELECT u.* FROM users u
          JOIN user_sessions s ON s.user_id = u.id
          WHERE s.id = ? AND s.revoked_at IS NULL
@@ -206,7 +205,7 @@ function requireLogin(PDO $pdo): array {
         header('Location: /easy/login');
         exit;
     }
-    $pdo->prepare("UPDATE user_sessions SET last_seen_at = NOW() WHERE id = ?")
+    $conn->prepare("UPDATE user_sessions SET last_seen_at = NOW() WHERE id = ?")
         ->execute([$_SESSION['db_session_id']]);
     return $user;
 }

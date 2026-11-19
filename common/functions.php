@@ -65,6 +65,68 @@ function catchroute($conn){
 }
 
 
+class FormRenderer {
+    
+    private static function getFormConfig($formName) {
+        $cacheFile = dirname(__DIR__) . '/cache/dynamicforms.cache.php';
+        
+        if (!file_exists($cacheFile)) {
+            return null;
+        }
+
+        $forms = include $cacheFile;
+        return $forms[strtolower($formName)] ?? null;
+    }
+
+    public static function render($formName) {
+        $config = self::getFormConfig($formName);
+
+        if (!$config) {
+            return "<div class='alert alert-danger'>Form configuration for '{$formName}' not found.</div>";
+        }
+
+        $details = $config['Details'];
+        
+        $html = "<input type='hidden' name='Id' id='Id' value='0'>";
+        $html .= '<div class="form-row">';
+
+        foreach ($details['fields'] as $field) {
+            $col         = $field['col'] ?? 12;
+            $name        = $field['name']; // DB Column name
+            $id          = $field['id'] ?? $name; // HTML ID (falls back to name if not provided)
+            $type        = $field['type'] ?? 'text';
+            $label       = $field['label'] ?? ucfirst($name);
+            $val         = $field['val'] ?? '';
+            $placeholder = $field['placeholder'] ?? '';
+            $required    = strpos($val, 'required') !== false ? 'required' : '';
+
+            // Use the specific ID for the group wrapper
+            $html .= '<div class="form-group col-' . $col . ' input-group" id="group_' . $id . '">';
+            $html .= '<label for="' . $id . '">' . htmlspecialchars($label) . '</label>';
+            
+            if ($type === 'select') {
+                $html .= '<select class="form-control" id="' . $id . '" name="' . $name . '" data-val="' . $val . '" ' . $required . '>';
+                $html .= '<option value="">Select...</option>';
+                foreach ($field['options'] ?? [] as $opt) {
+                    $html .= '<option value="' . htmlspecialchars($opt['value']) . '">' . htmlspecialchars($opt['label']) . '</option>';
+                }
+                $html .= '</select>';
+            } elseif ($type === 'textarea') {
+                $html .= '<textarea class="form-control" id="' . $id . '" name="' . $name . '" data-val="' . $val . '" placeholder="' . $placeholder . '" ' . $required . '></textarea>';
+            } else {
+                $html .= '<input type="' . $type . '" class="form-control" id="' . $id . '" name="' . $name . '" data-val="' . $val . '" placeholder="' . $placeholder . '" ' . $required . '>';
+            }
+            
+            $html .= '<div class="error-msg"></div>';
+            $html .= '</div>'; // End form-group
+        }
+
+        $html .= '</div>'; // End form-row
+
+        return $html;
+    }
+}
+
 function catchdynamicforms($conn, $ttl = 3600, $force = false) {
     // Cache folder in parent directory (outside 'common'), matching catchroute
     $cacheDir  = dirname(__DIR__) . '/cache';
@@ -154,9 +216,106 @@ function catchdynamicforms($conn, $ttl = 3600, $force = false) {
 
 
 /**
+ * Validates incoming data against a dynamic form schema.
+ * 
+ * @param string $formName The name of the form (e.g., 'module_definition')
+ * @param array $data The incoming $_POST or JSON payload
+ * @return array An array of errors (empty if validation passes)
+ */
+function validateDynamicForm(string $formName, array $data): array {
+    $errors = [];
+    
+    // 1. Load the schema from cache
+    $cacheFile = dirname(__DIR__) . '/cache/dynamicforms.cache.php';
+    
+    if (!file_exists($cacheFile)) {
+        return ['general' => 'Form configuration cache not found.'];
+    }
+    
+    $forms = include $cacheFile;
+    $formConfig = $forms[strtolower($formName)] ?? null;
+    
+    if (!$formConfig || empty($formConfig['Details']['fields'])) {
+        return ['general' => "Form schema '{$formName}' not found."];
+    }
+
+    $schema = $formConfig['Details'];
+
+    // 2. Loop through fields and apply rules
+    foreach ($schema['fields'] as $field) {
+        $name  = $field['name'];
+        $label = $field['label'] ?? $name;
+        $rules = explode('|', $field['val'] ?? '');
+        $value = trim((string)($data[$name] ?? ''));
+
+        foreach ($rules as $rule) {
+            if ($rule === '') continue;
+            
+            // Parse rule parameter (e.g., maxlen:100)
+            $parts = explode(':', $rule);
+            $ruleName = $parts[0];
+            $param = $parts[1] ?? null;
+
+            switch ($ruleName) {
+                case 'required':
+                    if ($value === '') {
+                        $errors[$name] = "{$label} is required.";
+                    }
+                    break;
+                    
+                case 'email':
+                    if ($value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        $errors[$name] = "Please enter a valid email address.";
+                    }
+                    break;
+                    
+                case 'numeric':
+                    if ($value !== '' && !is_numeric($value)) {
+                        $errors[$name] = "{$label} must be a number.";
+                    }
+                    break;
+                    
+                case 'integer':
+                    if ($value !== '' && !filter_var($value, FILTER_VALIDATE_INT)) {
+                        $errors[$name] = "{$label} must be an integer.";
+                    }
+                    break;
+                    
+                case 'maxlen':
+                    if ($value !== '' && mb_strlen($value) > (int)$param) {
+                        $errors[$name] = "{$label} cannot exceed {$param} characters.";
+                    }
+                    break;
+                    
+                case 'minlen':
+                    if ($value !== '' && mb_strlen($value) < (int)$param) {
+                        $errors[$name] = "{$label} must be at least {$param} characters.";
+                    }
+                    break;
+                    
+                case 'alphanum':
+                    if ($value !== '' && !preg_match('/^[a-zA-Z0-9]+$/', $value)) {
+                        $errors[$name] = "{$label} can only contain letters and numbers.";
+                    }
+                    break;
+                    
+                case 'regex':
+                    if ($value !== '' && !preg_match($param, $value)) {
+                        $errors[$name] = "{$label} has an invalid format.";
+                    }
+                    break;
+            }
+        }
+    }
+
+    return $errors;
+}
+
+
+/**
  * Insert a new record WITHOUT audit logging (MySQL)
  *
- * @param PDO $pdo PDO database connection
+ * @param PDO $conn PDO database connection
  * @param string $table Table name
  * @param array $data Associative array of column => value pairs
  * @return int|string The ID of the newly inserted record
@@ -164,7 +323,7 @@ function catchdynamicforms($conn, $ttl = 3600, $force = false) {
  *
  * NOTE: Transaction must be managed by the calling script
  */
-function insertRecordNoLog($pdo, $table, $data) {
+function insertRecordNoLog($conn, $table, $data) {
     if (empty($table) || empty($data) || !is_array($data)) {
         throw new InvalidArgumentException("Invalid parameters for insertRecordNoLog()");
     }
@@ -179,16 +338,16 @@ function insertRecordNoLog($pdo, $table, $data) {
 
     // MySQL: no RETURNING — use lastInsertId() after execute()
     $sql  = "INSERT INTO $table ($columnsStr) VALUES ($placeholdersStr)";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $conn->prepare($sql);
     $stmt->execute($data);
 
-    return $pdo->lastInsertId();
+    return $conn->lastInsertId();
 }
 
 /**
  * Update records WITHOUT audit logging (MySQL)
  *
- * @param PDO $pdo PDO database connection
+ * @param PDO $conn PDO database connection
  * @param string $table Table name
  * @param array $data Associative array of column => value pairs to update
  * @param array $where Associative array of conditions (e.g., ['id' => 5])
@@ -197,7 +356,7 @@ function insertRecordNoLog($pdo, $table, $data) {
  *
  * NOTE: Transaction must be managed by the calling script
  */
-function updateRecordNoLog($pdo, $table, $data, $where) {
+function updateRecordNoLog($conn, $table, $data, $where) {
     if (empty($table) || empty($data) || empty($where)) {
         throw new InvalidArgumentException("Invalid parameters for updateRecordNoLog()");
     }
@@ -221,7 +380,7 @@ function updateRecordNoLog($pdo, $table, $data, $where) {
     $updateParams = array_merge($updateParams, $whereParams);
 
     $updateSql  = "UPDATE $table SET $setStr WHERE $whereStr";
-    $updateStmt = $pdo->prepare($updateSql);
+    $updateStmt = $conn->prepare($updateSql);
     $updateStmt->execute($updateParams);
 
     return $updateStmt->rowCount();
@@ -230,7 +389,7 @@ function updateRecordNoLog($pdo, $table, $data, $where) {
 /**
  * Delete records WITHOUT audit logging (MySQL)
  *
- * @param PDO $pdo PDO database connection
+ * @param PDO $conn PDO database connection
  * @param string $table Table name
  * @param array $where Associative array of conditions (e.g., ['id' => 5])
  * @return int Number of affected rows
@@ -238,7 +397,7 @@ function updateRecordNoLog($pdo, $table, $data, $where) {
  *
  * NOTE: Transaction must be managed by the calling script
  */
-function deleteRecordNoLog($pdo, $table, $where) {
+function deleteRecordNoLog($conn, $table, $where) {
     if (empty($table) || empty($where)) {
         throw new InvalidArgumentException("Invalid parameters for deleteRecordNoLog()");
     }
@@ -252,9 +411,11 @@ function deleteRecordNoLog($pdo, $table, $where) {
     $whereStr = implode(' AND ', $whereClauses);
 
     $deleteSql  = "DELETE FROM $table WHERE $whereStr";
-    $deleteStmt = $pdo->prepare($deleteSql);
+    $deleteStmt = $conn->prepare($deleteSql);
     $deleteStmt->execute($whereParams);
 
     return $deleteStmt->rowCount();
 }
+
+
 

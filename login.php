@@ -1,3 +1,14 @@
+<?php
+$cfg = $config;
+secureSessionStart($cfg);
+// Already logged in? bounce to dashboard
+if (!empty($_SESSION['user_id'])) {
+    header('Location: /easy/dashboard');
+    exit;
+}
+$csrf = csrfToken();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -58,28 +69,28 @@
                     <div class="gold-rule"></div>
                 </div>
 
-                <form autocomplete="off" id="loginForm">
+                <form autocomplete="off" id="loginForm" method="post">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
+
+                    <!-- Username -->
                     <div class="field-group" id="field1">
                         <div class="field-label">Username</div>
                         <div class="field-wrap">
-                            <input type="text" id="access" class="field-input transs" placeholder="username@domain.com"
-                                required />
+                            <input type="email" id="access" name="email" class="field-input transs"
+                                placeholder="username@domain.com" required />
                             <i class="fas fa-user"></i>
-                            <input id="access1" type="hidden"
-                                value="<?php echo date('Ymd').(sprintf('%06d',(gettimeofday()['usec']))); ?>">
-                            <?php echo "<input id='accesst' type='hidden'>"; ?>
                         </div>
                     </div>
 
+                    <!-- Password -->
                     <div class="field-group" id="field2">
                         <div class="field-label">Password</div>
                         <div class="field-wrap">
-                            <input type="password" id="acesskey" class="field-input transs" required />
+                            <input type="password" id="acesskey" name="password" class="field-input transs" required />
                             <i class="fas fa-lock"></i>
                             <button type="button" class="toggle-pw" id="togglePw" tabindex="-1">
                                 <i class="fas fa-eye" id="pwIcon"></i>
                             </button>
-                            <?php echo "<input id='acesskeyt' type='hidden'>"; ?>
                         </div>
                     </div>
 
@@ -100,62 +111,10 @@
         </div>
 
     </div><!-- /#stage -->
+    <script src="assets/js/sweetalert2@11.js" ></script>
+    <script src="js/functions.js" crossorigin="anonymous"></script>
+    <script src="js/login.js" crossorigin="anonymous"></script>
 
-    <script>
-    $(function() {
-
-        setTimeout(function() {
-            $('#brand-panel').addClass('visible');
-            setTimeout(function() {
-                $('#login-card').addClass('visible');
-                setTimeout(function() {
-                    $('#field1').addClass('in');
-                    setTimeout(function() {
-                        $('#field2').addClass('in');
-                        setTimeout(function() {
-                            $('#btnRow').addClass('in');
-                        }, 150);
-                    }, 120);
-                }, 300);
-            }, 200);
-        }, 80);
-
-        $('#togglePw').on('click', function() {
-            var $input = $('#acesskey');
-            var $icon = $('#pwIcon');
-            if ($input.attr('type') === 'password') {
-                $input.attr('type', 'text');
-                $icon.removeClass('fa-eye').addClass('fa-eye-slash');
-            } else {
-                $input.attr('type', 'password');
-                $icon.removeClass('fa-eye-slash').addClass('fa-eye');
-            }
-        });
-
-        $(document).on('mousemove', function(e) {
-            var mx = (e.clientX / window.innerWidth - 0.5) * 10;
-            var my = (e.clientY / window.innerHeight - 0.5) * 6;
-            $('#brand-panel').css('transform',
-                'rotateY(' + (8 + mx * 0.3) + 'deg) translateY(' + (my * 0.5) + 'px)');
-            $('#login-card').css('transform',
-                'rotateY(' + (-4 + mx * 0.2) + 'deg) translateY(' + (my * 0.4) + 'px)');
-        });
-
-        $('#loginForm').on('submit', function(e) {
-          e.preventDefault();
-            $('#btn-label').hide();
-            $('#spinner').show();
-
-            alert('Login functionality is not implemented in this demo.');
-
-            setTimeout(function() {
-                $('#btn-label').show();
-                $('#spinner').hide();
-            }, 3000);
-        });
-
-    });
-    </script>
 
 </body>
 

@@ -71,14 +71,7 @@ try {
             echo json_encode(['ok' => true, 'data' => $modules]);
             break;
 
-        // ==========================================
-        // FUTURE ACTIONS (Menu Definition, etc.)
-        // ==========================================
-        case 'saveroute':
-            // Handle route saving here
-            echo json_encode(['ok' => true, 'message' => 'Route saved.']);
-            break;
-
+ 
         // ==========================================
         // DYNAMIC FORM ACTIONS
         // ==========================================
@@ -166,6 +159,65 @@ try {
             catchdynamicforms($conn, 3600, true);
             
             echo json_encode(['ok' => true, 'message' => 'Form deleted successfully.']);
+            break;
+
+         // ==========================================
+        // ROUTE DEFINITION ACTIONS
+        // ==========================================
+        case 'getroutes':
+            $stmt = $conn->query("SELECT * FROM routedefinition ORDER BY Id DESC");
+            $routes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['ok' => true, 'data' => $routes]);
+            break;
+
+        case 'saveroute':
+            $id = (int)($body['Id'] ?? 0);
+
+            
+
+            // 1. Server-side validation against the schema
+            $errors = validateDynamicForm('route_definition', $body);
+            
+            if (!empty($errors)) {
+                echo json_encode(['ok' => false, 'errors' => $errors]);
+                exit;
+            }
+            
+            // 2. Prepare data dynamically based on schema
+            $schema = include 'cache/dynamicforms.cache.php';
+            $fields = $schema['route_definition']['Details']['fields'];
+            
+            $data = [];
+            foreach ($fields as $field) {
+                $name = $field['name'];
+                $data[$name] = trim((string)($body[$name] ?? ''));
+            }
+
+            // 3. Insert or Update
+            if ($id > 0) {
+                updateRecordNoLog($conn, 'routedefinition', $data, ['Id' => $id]);
+                $msg = 'Route updated successfully.';
+            } else {
+                insertRecordNoLog($conn, 'routedefinition', $data);
+                $msg = 'Route created successfully.';
+            }
+
+            // 4. CRITICAL: Rebuild the routes cache
+            catchroute($conn);
+
+            echo json_encode(['ok' => true, 'message' => $msg]);
+            break;
+
+        case 'deleteroute':
+            $id = (int)($body['Id'] ?? 0);
+            if ($id <= 0) throw new Exception('Invalid Route ID.');
+            
+            deleteRecordNoLog($conn, 'routedefinition', ['Id' => $id]);
+            
+            // CRITICAL: Rebuild the routes cache
+            catchroute($conn);
+            
+            echo json_encode(['ok' => true, 'message' => 'Route deleted successfully.']);
             break;
 
         default:

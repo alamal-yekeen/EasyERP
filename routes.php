@@ -53,10 +53,12 @@ try {
         'inbox' => 'pages/inbox.php',
         'modulemenu' => 'syssettings/modulemenu.php',
         'modelpage' => 'syssettings/modelpage.php',
+        'rolemanagement' => 'appsettings/rolemanagement.php',
         'dynamicform' => 'syssettings/dynamicform.php',
-        'syssettingbk' => 'engine/syssettings/syssettingbk.php',
+        'syssettingbk' => 'engine/syssettings/syssettingsbk.php',
+        'appsettingbk'=> 'engine/appsettings/appsettingsbk.php',
         // $dir.'participated' => 'pages/participated.php',
-        $dir.'test' => 'test.php'
+        'test' => 'test.php'
     ];
     
     if (isset($hardcodedRoutes[$action])) {

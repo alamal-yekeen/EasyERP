@@ -79,6 +79,22 @@
       </div>
     </div>
 
+    <div class="nav-group" data-module="appsettings">
+      <button class="nav-link nav-parent" data-toggle>
+        <i class="fa-solid fa-gear"></i>
+        <span>App Settings</span>
+        <i class="fa-solid fa-chevron-down chev"></i>
+      </button>
+      <div class="nav-sub-wrap">
+        <ul class="nav-sub">
+          <li><a href="<?= date('YmdHis') ?>" class="nav-link" data-page="rolemanagement" data-description="">
+            <i class="fa-solid fa-receipt"></i><span>Roles Management</span>
+          </a></li> 
+         
+        </ul>
+      </div>
+    </div>
+
     <!-- <div class="nav-sep"></div>
 
     <a href="" class="nav-link" data-page="settings" data-description="System Settings">

@@ -214,3 +214,184 @@
 .input-group.has-error label {
   color: var(--danger);
 }
+
+/* =========================================================
+   PREMIUM TABLE STYLING (Primary Header + Compact Padding)
+   ========================================================= */
+
+/* Table Container */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: var(--panel);
+}
+
+/* Table Header (Primary Gradient & Bright Font) */
+.data-table thead th {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #ffffff !important; /* Force bright text */
+  font-weight: 600;
+  padding: 8px 10px; /* Reduced from 10px 10px for horizontal compactness */
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: none; /* Remove default border */
+  white-space: nowrap;
+}
+
+/* Table Body Cells (Compact Padding) */
+.data-table tbody td {
+  padding: 6px 10px; /* Reduced from 12px 10px to make it tighter */
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle; /* Keeps elements vertically centered */
+}
+
+/* Hover Effect */
+.data-table tbody tr:hover {
+  background-color: var(--panel-2);
+}
+
+/* Remove last row border */
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* Tab Description Header */
+.tab-description {
+  background: var(--panel-2);
+  border-left: 4px solid var(--primary);
+  padding: 12px 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tab-description strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Fix text truncation for the compact view */
+.text-truncate {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+/* =========================================================
+   GENERIC TABLE CONTROLLER STYLES
+   ========================================================= */
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.table-search {
+  position: relative;
+  width: 280px;
+}
+
+.table-search i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-search input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.table-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+
+.table-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.table-page-length {
+  padding: 8px 28px 8px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Pagination */
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.table-info {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.page-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.page-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -614,6 +614,8 @@ function executeGenericSave(formEl, backendRoute, actionName, onSuccessCallback)
         payload[item.name] = item.value;
     });
 
+    console.log(payload);
+
     $.ajax({
         url: backendRoute,
         method: 'POST',
@@ -621,6 +623,7 @@ function executeGenericSave(formEl, backendRoute, actionName, onSuccessCallback)
         data: JSON.stringify(payload),
         dataType: 'json',
         success: function(res) {
+            console.log('AJAX response:', res);
             if (res.ok) {
                 successmessage(res.message || 'Saved successfully.');
                 
@@ -683,4 +686,200 @@ function resetGenericForm(formId) {
             delete activeValidators[formId];
         }
     }
+}
+
+
+/* =========================================================
+   GENERIC TABLE CONTROLLER
+   ========================================================= */
+class TableController {
+    constructor(tableId, options = {}) {
+        this.tableId = tableId;
+        this.$table = $('#' + tableId);
+        this.$tbody = this.$table.find('tbody');
+        
+        // Default options
+        this.config = {
+            searchInputId: tableId + '_search',
+            pageLengthId: tableId + '_length',
+            infoId: tableId + '_info',
+            paginationId: tableId + '_pagination',
+            defaultLength: 10,
+            ...options
+        };
+
+        this.allRows = [];       // All <tr> elements
+        this.filteredRows = [];  // Rows after search filter
+        this.currentPage = 1;
+        this.pageLength = this.config.defaultLength;
+
+        this.init();
+    }
+
+    init() {
+        // 1. Bind Search
+        $(document).on('keyup input', '#' + this.config.searchInputId, (e) => {
+            this.search(e.target.value);
+        });
+
+        // 2. Bind Page Length
+        $(document).on('change', '#' + this.config.pageLengthId, (e) => {
+            this.pageLength = parseInt($(e.target).val());
+            this.currentPage = 1;
+            this.render();
+        });
+
+        // 3. Bind Pagination Clicks
+        $(document).on('click', '#' + this.config.paginationId + ' .page-btn', (e) => {
+            const page = $(e.currentTarget).data('page');
+            if (page && page !== this.currentPage) {
+                this.currentPage = page;
+                this.render();
+            }
+        });
+    }
+
+    // Call this whenever you load new data from AJAX
+    setData(htmlRows) {
+        this.$tbody.html(htmlRows);
+        this.allRows = this.$tbody.find('tr').toArray();
+        this.filteredRows = [...this.allRows];
+        this.currentPage = 1;
+        this.render();
+    }
+
+    search(query) {
+        query = query.toLowerCase().trim();
+        if (query === '') {
+            this.filteredRows = [...this.allRows];
+        } else {
+            this.filteredRows = this.allRows.filter(row => {
+                return $(row).text().toLowerCase().includes(query);
+            });
+        }
+        this.currentPage = 1;
+        this.render();
+    }
+
+    render() {
+        const totalRows = this.filteredRows.length;
+        const totalPages = Math.ceil(totalRows / this.pageLength) || 1;
+
+        // Ensure current page is within bounds
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+        if (this.currentPage < 1) this.currentPage = 1;
+
+        // Hide all rows first
+        this.$tbody.find('tr').hide();
+
+        // Calculate slice
+        const startIdx = (this.currentPage - 1) * this.pageLength;
+        const endIdx = Math.min(startIdx + this.pageLength, totalRows);
+
+        // Show only the sliced rows
+        for (let i = startIdx; i < endIdx; i++) {
+            $(this.filteredRows[i]).show();
+        }
+
+        // Update Info Text
+        const infoText = totalRows === 0 
+            ? 'Showing 0 entries' 
+            : `Showing ${startIdx + 1} to ${endIdx} of ${totalRows} entries`;
+        $('#' + this.config.infoId).text(infoText);
+
+        // Render Pagination Buttons
+        this.renderPagination(totalPages);
+    }
+
+    renderPagination(totalPages) {
+        const $container = $('#' + this.config.paginationId);
+        let html = '';
+
+        // Prev Button
+        html += `<button class="page-btn" data-page="${this.currentPage - 1}" ${this.currentPage === 1 ? 'disabled' : ''}>
+                    <i class="fa-solid fa-chevron-left"></i>
+                 </button>`;
+
+        // Page Numbers (Show max 5 pages)
+        let startPage = Math.max(1, this.currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += `<button class="page-btn ${i === this.currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+        }
+
+        // Next Button
+        html += `<button class="page-btn" data-page="${this.currentPage + 1}" ${this.currentPage === totalPages ? 'disabled' : ''}>
+                    <i class="fa-solid fa-chevron-right"></i>
+                 </button>`;
+
+        $container.html(html);
+    }
+}
+
+/* =========================================================
+   GENERIC EXPORT TO EXCEL (CSV)
+   ========================================================= */
+function exportTableToCSV(tableId, filename = 'export.csv') {
+    const $table = $('#' + tableId);
+    
+    // 1. Get all rows (including hidden ones so it exports everything, not just the current page)
+    // We exclude the header row from tbody and any rows with colspan (like "No data found")
+    const rows = $table.find('tbody tr').filter(function() {
+        return $(this).find('td').length > 1; 
+    });
+
+    if (rows.length === 0) {
+        errormessage("No data available to export.");
+        return;
+    }
+
+    let csvContent = "";
+
+    // 2. Extract Headers
+    const headers = [];
+    $table.find('thead th').each(function() {
+        // Remove the "Actions" column from export
+        const text = $(this).text().trim();
+        if (text !== 'Actions' && text !== '') {
+            headers.push(`"${text.replace(/"/g, '""')}"`);
+        }
+    });
+    csvContent += headers.join(",") + "\r\n";
+
+    // 3. Extract Data
+    rows.each(function() {
+        const rowData = [];
+        $(this).find('td').each(function(index) {
+            // Skip the last column (Actions)
+            if (index === $(this).parent().find('td').length - 1) return;
+
+            // Get text, handle empty cells, escape quotes
+            let cellText = $(this).text().trim().replace(/\s+/g, ' '); // Fix multi-line text
+            cellText = cellText.replace(/"/g, '""'); // Escape double quotes
+            rowData.push(`"${cellText}"`);
+        });
+        
+        // Only add rows that have data
+        if (rowData.length > 0) {
+            csvContent += rowData.join(",") + "\r\n";
+        }
+    });
+
+    // 4. Create Download Link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }

@@ -32,10 +32,10 @@ if ($useCache) {
 }
 
 $action = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
-$action = strtolower($action);
-$dir = '/easy/';
-$actionRoute = str_replace('easy/', '', $action); // Remove 'easy/' prefix if present
-$action = $dir . $actionRoute; // Prepend '/easy/' to the action
+ $action = strtolower($action);
+// $actionRoute = str_replace('easy/', '', $action); // Remove 'easy/' prefix if present
+$actionRoute = str_replace('easy', '', $action); // Remove 'easy/' prefix if present
+$action = $actionRoute; // Prepend '/easy/' to the action
 // $url = isset($_GET['url']) ? $_GET['url'] : '';
 // $action = strtolower($url);
 
@@ -44,17 +44,17 @@ $action = $dir . $actionRoute; // Prepend '/easy/' to the action
 try {
     // Hardcoded routes (keep these as they are for performance)
     $hardcodedRoutes = [
-        $dir.'' => 'login.php',
-        $dir.'login' => 'login.php',
-        $dir.'loginbk' => 'Engine/general/loginbk.php',
-        $dir.'logout' => 'Engine/general/loginbk.php',
-        $dir.'home' => 'home.php',
-        $dir.'dashboard' => 'pages/dashboard.php',
-        $dir.'inbox' => 'pages/inbox.php',
-        $dir.'modulemenu' => 'syssettings/modulemenu.php',
-        $dir.'modelpage' => 'syssettings/modelpage.php',
-        $dir.'dynamicform' => 'syssettings/dynamicform.php',
-        $dir.'syssettingbk' => 'engine/syssettings/syssettingbk.php',
+        '' => 'login.php',
+        'login' => 'login.php',
+        'loginbk' => 'Engine/general/loginbk.php',
+        'logout' => 'Engine/general/loginbk.php',
+        'home' => 'home.php',
+        'dashboard' => 'pages/dashboard.php',
+        'inbox' => 'pages/inbox.php',
+        'modulemenu' => 'syssettings/modulemenu.php',
+        'modelpage' => 'syssettings/modelpage.php',
+        'dynamicform' => 'syssettings/dynamicform.php',
+        'syssettingbk' => 'engine/syssettings/syssettingbk.php',
         // $dir.'participated' => 'pages/participated.php',
         $dir.'test' => 'test.php'
     ];

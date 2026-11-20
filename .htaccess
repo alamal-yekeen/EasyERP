@@ -1,23 +1,27 @@
 
 
 # Enable Rewrite Engine
-RewriteEngine On
-RewriteBase /easy/
+
+#RewriteEngine On
+#RewriteBase /easy/
 
 # ---------------------------------------------------------------------------
 # 1. FORCE ALL PHP REQUESTS INTO ROUTER (Except routes.php itself)
 # ---------------------------------------------------------------------------
-RewriteCond %{REQUEST_URI} !/routes\.php$ [NC]
-RewriteRule ^(.*\.php)$ routes.php?url=$1 [QSA,L]
+
+#RewriteCond %{REQUEST_URI} !/routes\.php$ [NC]
+#RewriteRule ^(.*\.php)$ routes.php?url=$1 [QSA,L]
 
 # ---------------------------------------------------------------------------
 # 2. MAIN SPA ROUTE HANDLER (Ignore existing files and directories)
 # ---------------------------------------------------------------------------
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ routes.php?url=$1 [QSA,L]
+
+#RewriteCond %{REQUEST_FILENAME} !-f
+#RewriteCond %{REQUEST_FILENAME} !-d
+#RewriteRule ^(.*)$ routes.php?url=$1 [QSA,L]
 
 # ---------------------------------------------------------------------------
 # Default Documents
 # ---------------------------------------------------------------------------
-DirectoryIndex routes.php Default.htm index.html iisstart.htm
+
+#DirectoryIndex routes.php Default.htm index.html iisstart.htm

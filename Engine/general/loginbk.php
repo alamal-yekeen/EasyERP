@@ -77,7 +77,7 @@ if(($body['login'] === 1)) {
 
     jsonOut(200, [
         'ok'        => true,
-        'redirect'  => '/easy/home',
+        'redirect'  => 'home',
         'user'      => [
             'id'    => (int)$user['id'],
             'name'  => $user['full_name'],
@@ -96,5 +96,5 @@ if (!empty($_SESSION['db_session_id'])) {
 }
 
 destroySession();
-header('Location: /easy/login');
+header('Location: login');
 exit;

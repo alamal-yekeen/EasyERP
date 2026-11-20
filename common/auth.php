@@ -188,7 +188,7 @@ function issueSession(PDO $conn, int $userId, string $ipBin,  string $ua, array 
 /** Require a logged-in user on protected pages. */
 function requireLogin(PDO $conn): array {
     if (empty($_SESSION['user_id']) || empty($_SESSION['db_session_id'])) {
-        header('Location: /easy/login');
+        header('Location: /login');
         exit;
     }
     $stmt = $conn->prepare(
@@ -202,7 +202,7 @@ function requireLogin(PDO $conn): array {
     $user = $stmt->fetch();
     if (!$user) {
         destroySession();
-        header('Location: /easy/login');
+        header('Location: //login');
         exit;
     }
     $conn->prepare("UPDATE user_sessions SET last_seen_at = NOW() WHERE id = ?")

@@ -287,7 +287,7 @@
           
           // If session expired (401), redirect to login
           if (xhr.status === 401) {
-            window.location.href = '/easy/login';
+            window.location.href = 'login';
             return;
           }
 

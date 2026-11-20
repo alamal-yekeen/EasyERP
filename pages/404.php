@@ -25,10 +25,10 @@
     </p>
 
     <div class="error-actions">
-      <a href="/easy/home" class="btn btn-primary btn-lg" data-page="dashboard" data-description="Dashboard Overview">
+      <a href="home" class="btn btn-primary btn-lg" data-page="dashboard" data-description="Dashboard Overview">
         <i class="fa-solid fa-house"></i> Back to Dashboard
       </a>
-      <button onclick="window.location.href = '/easy/home';" class="btn btn-glass btn-lg">
+      <button onclick="window.location.href = 'home';" class="btn btn-glass btn-lg">
         <i class="fa-solid fa-arrow-left"></i> Go Back
       </button>
     </div>

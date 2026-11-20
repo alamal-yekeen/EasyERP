@@ -3,7 +3,7 @@ $cfg = $config;
 secureSessionStart($cfg);
 // Already logged in? bounce to dashboard
 if (!empty($_SESSION['user_id'])) {
-    header('Location: /easy/dashboard');
+    header('Location: dashboard');
     exit;
 }
 $csrf = csrfToken();

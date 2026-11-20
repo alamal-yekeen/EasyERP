@@ -73,19 +73,19 @@ $(function() {
             // console.log('Payload:', payload);
 
             $.ajax({
-                    url: '/easy/loginbk',
+                    url: 'loginbk',
                     method: 'POST',
                     contentType: 'application/json',
                     dataType: 'json',
                     data: JSON.stringify(payload)
                 })
                 .done(function(res) {
-                    // console.log('Response:', res);
+                    console.log('Response:', res);
                     // return;
                     if (res && res.ok) {
                         successmessage('Login successful! Redirecting...');
                         setTimeout(function() {
-                            window.location.href = res.redirect || '/easy/home';
+                            window.location.href = res.redirect || 'home';
                         }, 1500);
                     } else {
                     console.log('Response:', res);
